@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Membership payment | SALUTE</title>
+<meta name="robots" content="noindex">
+<link rel="icon" type="image/png" href="favicon-32.png">
+<link rel="stylesheet" href="styles.css">
+<style>
+  .paywrap { max-width: 760px; margin: 0 auto; padding: clamp(40px, 8vw, 96px) clamp(20px, 5vw, 56px) 96px; }
+  .paywrap .display { font-size: clamp(56px, 10vw, 112px); }
+  .actions { display: grid; gap: 12px; margin-top: 30px; max-width: 420px; }
+  .simnote { border: 1px dashed var(--black); padding: 14px 16px; font: 500 14px/1.45 var(--sans); margin-top: 22px; }
+</style>
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="https://www.salute.community" aria-label="SALUTE home"><img src="salute-logo-black.png" alt="SALUTE" width="120"></a>
+  <a class="toplink" href="https://www.salute.community">salute.community</a>
+</header>
+<main class="paywrap" id="main">
+  <p class="eyebrow" id="eyebrow">SALUTE membership</p>
+  <h1 class="display" id="title">One moment</h1>
+  <p class="lede" id="lede"></p>
+  <div id="body"></div>
+  <div class="actions" id="actions"></div>
+  <p class="fine">Questions about your membership or payment? <a href="mailto:hello@salute.community">hello@salute.community</a></p>
+</main>
+<footer class="footer">
+  <img src="salute-logo-white.png" alt="SALUTE" width="110">
+  <nav>
+    <a href="https://www.salute.community/about">About</a>
+    <a href="https://www.salute.community/terms-of-service">Terms of Service</a>
+    <a href="https://www.salute.community/privacy-policy">Privacy Policy</a>
+    <a href="mailto:hello@salute.community">Contact</a>
+  </nav>
+  <p>© SALUTE Foundation, Inc.</p>
+</footer>
+<script src="config.js"></script>
+<script>
+(function () {
+  var q = new URLSearchParams(location.search);
+  var state = q.get("state") || "unavailable";
+  var payBase = (window.SALUTE_APPLY && window.SALUTE_APPLY.payBase) || "https://nyqckfgiocbzovhwmvap.supabase.co/functions/v1/membership-pay/pay";
+  var APP = { ios: "https://apps.apple.com/us/app/salute-community/id6503336241", android: "https://play.google.com/store/apps/details?id=community.salute.members" };
+  function btn(href, text, ghost) { var a = document.createElement("a"); a.className = "btn" + (ghost ? " ghost" : ""); a.href = href; a.textContent = text; if (/^https?:/.test(href) && href.indexOf(location.host) < 0) { a.target = "_blank"; a.rel = "noopener"; } return a; }
+  function p(text) { var el = document.createElement("p"); el.textContent = text; return el; }
+  var S = {
+    paid: { eyebrow: "Payment received", title: "Welcome to SALUTE", lede: "Thank you. Your annual membership is active and your member access is switched on.",
+      body: ["Download the SALUTE app and sign in with the same email address you used to request your invitation. Your membership is connected automatically.",
+             "Your card is saved for your yearly renewal on this date next year. You will get a receipt from Stripe by email."],
+      actions: [[APP.ios, "Get the app for iPhone"], [APP.android, "Get the app for Android", true]] },
+    cancelled: { eyebrow: "Payment not completed", title: "No charge was made", lede: "You left the payment page before finishing. Your approval is still waiting for you.",
+      body: ["When you're ready, use the button below or the link in your approval email to complete your annual membership."],
+      actions: q.get("t") ? [[payBase + "?t=" + encodeURIComponent(q.get("t")), "Complete my membership"]] : [] },
+    expired: { eyebrow: "Link expired", title: "This link has expired", lede: "For your security, payment links are valid for a limited time.",
+      body: ["Email hello@salute.community and we'll send you a fresh link right away."], actions: [["mailto:hello@salute.community?subject=New%20membership%20payment%20link", "Ask for a new link"]] },
+    already_paid: { eyebrow: "Already paid", title: "You're all set", lede: "We've already received your membership payment, so there's nothing more to pay.",
+      body: ["Sign in to the SALUTE app with the email you used to request your invitation."], actions: [[APP.ios, "Get the app for iPhone"], [APP.android, "Get the app for Android", true]] },
+    already_member: { eyebrow: "Already a member", title: "You're already a member", lede: "Our records show an active SALUTE membership for this email, so we haven't charged you again.",
+      body: ["If you think this is a mistake, email hello@salute.community."], actions: [[APP.ios, "Get the app for iPhone"]] },
+    unavailable: { eyebrow: "Link not available", title: "This link isn't active", lede: "This payment link is no longer active.",
+      body: ["If you were expecting to complete your membership, email hello@salute.community and we'll help."], actions: [["https://www.salute.community", "Back to salute.community", true]] },
+    error: { eyebrow: "Something went wrong", title: "Please try again", lede: "We couldn't open the payment page just now. No charge was made.",
+      body: ["Please try your link again in a few minutes. If it keeps happening, email hello@salute.community."], actions: [] },
+    simulated: { eyebrow: "Test mode (simulated)", title: "Checkout preview", lede: "This is where the Stripe checkout for the annual membership opens.",
+      body: ["No Stripe account is connected to this preview yet, so no payment can be taken here."], actions: [] }
+  };
+  var s = S[state] || S.unavailable;
+  document.getElementById("eyebrow").textContent = s.eyebrow;
+  document.getElementById("title").textContent = s.title;
+  document.getElementById("lede").textContent = s.lede;
+  var body = document.getElementById("body");
+  s.body.forEach(function (t) { body.appendChild(p(t)); });
+  if (state === "simulated") { var n = document.createElement("div"); n.className = "simnote"; n.textContent = "Simulated session " + (q.get("session") || "") + ". Tests complete it by sending a signed test webhook."; body.appendChild(n); }
+  var actions = document.getElementById("actions");
+  s.actions.forEach(function (a) { actions.appendChild(btn(a[0], a[1], a[2])); });
+  document.title = s.title + " | SALUTE";
+})();
+</script>
+</body>
+</html>
